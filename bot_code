@@ -1,0 +1,145 @@
+#code :-
+
+import discord
+import os
+import requests
+import json
+import random
+from replit import db
+from keep_alive import keep_alive
+
+client = discord.Client()
+
+sad_words = ["sad", "depressed", "unhappy", "angry", "miserable", "sad"]
+
+starter_encouragements = [
+    "Cheer up!", "Hang in there.", "You are a great person / bot!"
+]
+
+brooklyn_99_quotes = [
+        'I\'m the human form of the 💯 emoji.',
+        'Bingpot!',
+        (
+            'Cool. Cool cool cool cool cool cool cool, '
+            'no doubt no doubt no doubt no doubt.'
+        ),
+    ]
+skyrim_quote = [
+"I used to be an adventurer like you, then I took an arrow to the knee.",
+"Kill well… and often.",
+"Sweet Mother, sweet Mother, send your child unto me, for the sins of the unworthy must be baptized in blood and fear.",
+"No lollygaggin’.",
+"Nords are so serious about beards. So many beards. M'aiq thinks they wish they had glorious manes like Khajiit.",
+"I am sworn to carry your burdens.",
+"Let me guess… someone stole your sweetroll?",
+"I’ve been huntin’ and fishin’ in these parts for years.",
+"Nords’ armor has lots of fur. This sometimes makes M'aiq nervous.",
+"Do you get to the cloud district very often? Oh what am I saying, of course you don’t.",
+"You see those warriors from Hammerfell? They’ve got curved swords. Curved. Swords.",
+"I look forward to hearing about the next person you murder!",
+"I got to thinking… maybe i’m the Dragonborn and I just don’t know it yet!",
+"Hail, Companion!",
+"My cousins out fighting dragons, and what do I get? Guard duty.",
+"All the living shall fear the dead.",
+"Kill one person, and you can solve so many problems. I wonder at the possibilities.",
+"What is better? To be born good, or to overcome your evil nature through great effort?",
+"You know what we call people who mess with us? Suicide.",
+"You’re either the bravest person i’ve ever met… or the biggest fool.",
+"You want knives? You want them in your belly? No? Then you stop talking to Deeja!",
+"Sorry lass, I’ve got important things to do. We’ll speak another time.",
+"Ummm… you got no clothes. You should get some.",
+"Psst! I know who you are… Hail Sithis!",
+"I’m the older sister, by nearly five minutes. Sissel’s barely worthy to walk in my shadow.",
+"Dragonborn, huh? Was it your ma or your pa that was the dragon?",
+"These Forsworn don’t even have the decency to dress properly.",
+"I faced him fearlessly, my fate inescapable, yet my honor unstained, can Ulfric say the same?",
+"How high the mountains of Skyrim rise.",
+"Giant Spiders? What’s next? Giant Snakes?",
+"I will eat your heart.",
+] 
+
+if "responding" not in db.keys():
+  db["responding"] = True
+
+def get_quote():
+    response = requests.get("https://zenquotes.io/api/random")
+    json_data = json.loads(response.text)
+    quote = json_data[0]['q'] + " \n \t-" + json_data[0]['a']
+    return (quote)
+
+
+def update_encouragements(encouraging_message):
+    if "encouragements" in db.keys():
+        encouragements = db["encouragements"]
+        encouragements.append(encouraging_message)
+        db["encouragements"] = encouragements
+    else:
+        
+        db["encouragements"] = [encouraging_message]
+
+
+def delete_encouragment(index):
+    encouragements = db["encouragements"]
+    if len(encouragements) > index:
+        del encouragements[index]
+    db["encouragements"] = encouragements
+
+
+@client.event
+async def on_ready():
+    print('We have logged in as {0.user}'.format(client))
+
+
+@client.event
+async def on_message(message):
+    if message.author == client.user:
+        return
+
+    msg = message.content
+    
+    if msg == '99!':
+        response = random.choice(brooklyn_99_quotes)
+        await message.channel.send(response)
+    if msg == 'for skyrim':
+        response = random.choice(skyrim_quote)
+        await message.channel.send(response)
+
+    if msg.startswith("$inspire"):
+        quote = get_quote()
+        await message.channel.send(quote)
+
+    #options = starter_encouragements
+    #if "encouragements" in db.keys():
+    #    options = options + db["encouragements"]
+
+    if db["responding"]:  
+      if any(word in msg for word in sad_words):
+        await message.channel.send(random.choice  (starter_encouragements))
+
+    if msg.startswith("$new"):
+        encouraging_message = msg.split("$new ", 1)[1]
+        update_encouragements(encouraging_message)
+        await message.channel.send("New encouraging message added.")
+
+    if msg.startswith("$del"):
+        encouragements = []
+        if "encouragements" in db.keys():
+            index = int(msg.split("$del", 1)[1])
+            delete_encouragment(index)
+            encouragements = db["encouragements"]
+        await message.channel.send(encouragements)
+        
+    if msg.startswith("$responding"):
+      value = msg.split("$responding ",1)[1]
+      if  value.lower() == "true":
+        db["responding"] = True
+        await message.channel.send("Responding is on.")
+      else:
+        db["responding"] = False
+        await message.channel.send("Responding is off.")
+    
+    if msg == "$check status":
+      value = db["responding"]
+      await message.channel.send(value)
+keep_alive()
+client.run(os.getenv('TOKEN'))
