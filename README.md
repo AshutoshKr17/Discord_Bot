@@ -1,2 +1,2 @@
 # Discord_Bot
-This is my first discord bot !
+This is a discord bot written in python.
